@@ -50,6 +50,8 @@ SQLite Analysis History
 <img width="1429" height="836" alt="Screenshot 2026-08-29 223310" src="https://github.com/user-attachments/assets/dabfe964-610b-4cbd-81d4-33f33bb2a465" />
 <img width="1356" height="669" alt="Screenshot 2026-08-29 223344" src="https://github.com/user-attachments/assets/62cd898f-c0a3-42c7-96c2-a2b1f4c5fd18" />
 <img width="1430" height="886" alt="Screenshot 2026-08-29 223330" src="https://github.com/user-attachments/assets/b6300f87-6130-4155-86ec-9bd532008ae1" />
+<img width="1332" height="658" alt="Screenshot 2026-08-29 223337" src="https://github.com/user-attachments/assets/818ef0fb-1705-4a36-8581-4d8799860e0c" />
+
 
 
 
