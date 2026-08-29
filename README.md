@@ -1,141 +1,147 @@
 # AI Image Quality Assessment
 
-An end-to-end computer-vision and machine-learning system for automated image quality assessment.
+An end-to-end computer-vision and machine-learning system that automatically evaluates image quality, identifies known degradations, detects unusual image patterns, estimates severity, and returns an acceptance/rejection decision.
 
-The system accepts an image, validates it, extracts measurable visual features, classifies known degradation using **Random Forest V3 Expanded**, detects unusual feature patterns using **Isolation Forest**, estimates severity, calculates a quality score, and returns an acceptance/rejection decision through a FastAPI backend and React frontend.
+The application uses a **React frontend**, **FastAPI backend**, **Random Forest V3 Expanded**, **Isolation Forest**, and **SQLite**.
+## Production Model Naming
 
-## Key Results
+The final production classifier is referred to in the repository as **Random Forest V3 Expanded**.
 
-| Metric | Result |
-|---|---:|
-| Expanded dataset | 9,500 samples |
-| Source images | 500 |
-| Training samples | 6,650 |
-| Validation samples | 1,425 |
-| Test samples | 1,425 |
-| Production CV features | 10 |
-| Test accuracy | **88.21%** |
-| Test Macro-F1 | **83.64%** |
-
-### Per-Class F1
-
-| Class | F1 |
-|---|---:|
-| Blur | 0.95 |
-| Corruption | 0.78 |
-| Noise | 0.91 |
-| None | 0.54 |
-| Overexposure | 0.85 |
-| Underexposure | 0.98 |
-
-## Architecture
+The name describes how the final model was produced:
 
 ```text
-React Frontend
-      |
-      | HTTP
-      v
-FastAPI Backend
-      |
-      v
-Image Validation
-      |
-      v
+V3
+│
+├── Final feature-selection version
+│
+│   └── 10 selected computer-vision features
+│
+└── Expanded
+    │
+    └── Trained using the expanded dataset
+        generated from 500 source images
+
+## 🚀 Overview
+
+The production pipeline is:
+
+```text
+Image Upload
+     ↓
+File & Image Validation
+     ↓
 CV Feature Extraction
-      |
-      +----------------------+
-      |                      |
-      v                      v
-Random Forest V3       Isolation Forest
-Expanded              Anomaly Detection
-      |                      |
-      +----------+-----------+
-                 |
-                 v
-          Severity Estimation
-                 |
-                 v
-           Quality Score
-                 |
-                 v
-        ACCEPTED / REJECTED
-                 |
-                 v
-             SQLite
+     ↓
+Random Forest V3 Expanded
+     ↓
+Severity Estimation
+     ↓
+Isolation Forest Anomaly Detection
+     ↓
+Quality Score (0–100)
+     ↓
+ACCEPTED / REJECTED
+     ↓
+SQLite Analysis History
+
 ```
+## Sample Images Of Production 
 
-## Production Pipeline
 
-### 1. Image validation
 
-The API accepts JPEG, PNG, and WEBP images. Uploaded content is validated before processing.
 
-### 2. Computer-vision feature extraction
 
-The production classifier uses 10 measurable features:
+## 🧠 Production ML Pipeline
 
-- sharpness
-- brightness
-- highlight clipping
-- contrast
-- saturation
-- edge density
-- shadow clipping
-- dark pixel ratio
-- bright pixel ratio
-- blockiness
+### 1. Image Validation
+
+The API accepts:
+
+- JPEG
+- PNG
+- WEBP
+
+Uploaded content is validated before processing.
+
+### 2. Computer-Vision Features
+
+The production classifier uses 10 measurable image features:
+
+1. Sharpness
+2. Brightness
+3. Highlight clipping
+4. Contrast
+5. Saturation
+6. Edge density
+7. Shadow clipping
+8. Dark pixel ratio
+9. Bright pixel ratio
+10. Blockiness
 
 ### 3. Random Forest V3 Expanded
 
-The classifier predicts one of six classes:
+The Random Forest predicts six degradation classes:
 
-- blur
-- corruption
-- noise
-- none
-- overexposure
-- underexposure
+- `blur`
+- `corruption`
+- `noise`
+- `none`
+- `overexposure`
+- `underexposure`
 
-The model was trained on 6,650 training samples and evaluated on a held-out test set of 1,425 samples.
+It was trained using 6,650 training samples and evaluated on a held-out test set of 1,425 samples.
 
 **Test accuracy: 88.21%**
 
 **Test Macro-F1: 83.64%**
 
-### 4. Severity estimation
+### 4. Severity Estimation
 
-The predicted degradation and image statistics are used to estimate severity as low, medium, or high.
+The predicted degradation and image statistics are used to estimate severity:
+
+- Low
+- Medium
+- High
 
 ### 5. Isolation Forest
 
-Isolation Forest is a complementary anomaly-detection layer.
+Isolation Forest provides a complementary anomaly-detection signal.
 
-Random Forest answers:
+The two models answer different questions:
 
-> Which known degradation class does this image resemble?
+```text
+Random Forest
+→ Which known degradation does this image resemble?
 
-Isolation Forest answers:
+Isolation Forest
+→ Is this feature pattern unusual compared with the learned distribution?
+```
 
-> Is this feature pattern unusual compared with the learned distribution?
+An anomaly is therefore an additional signal and does **not automatically mean the image is defective**.
 
-An anomaly is therefore an additional signal; it does not automatically mean that an image is defective.
+### 6. Quality Scoring
 
-### 6. Quality scoring
+The quality engine combines:
 
-The quality engine combines classification, confidence, severity, and anomaly information into a score from 0 to 100.
+- classification
+- model confidence
+- severity
+- anomaly information
+
+to produce a score from **0 to 100**.
 
 Current decision threshold:
 
 ```text
-Score >= 75  -> ACCEPTED
-Score < 75   -> REJECTED
+Score >= 75  → ACCEPTED
+Score < 75   → REJECTED
 ```
 
-A clean image classified as `none` without an anomaly can legitimately receive **100/100**.
+A clean image classified as `none` without an anomaly can receive **100/100**.
 
-## Global Feature Importance
+## 📈 Feature Importance
 
-The expanded Random Forest reported:
+Global Random Forest feature importance:
 
 | Feature | Importance |
 |---|---:|
@@ -150,11 +156,73 @@ The expanded Random Forest reported:
 | Dark pixel ratio | 3.16% |
 | Saturation | 3.10% |
 
-These are **global model-level importances**, not explanations of an individual prediction.
+These are **global model-level importances**, not explanations for an individual prediction.
 
-## Backend API
+## 🏗️ Architecture
 
-The FastAPI application is in `backend/main.py`.
+```text
+┌──────────────────────┐
+│   React Frontend     │
+│      React 19        │
+│       Vite 6         │
+└──────────┬───────────┘
+           │ HTTP
+           ▼
+┌──────────────────────┐
+│   FastAPI Backend    │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────┐
+│  Image Validation    │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────┐
+│ CV Feature Extraction│
+└──────────┬───────────┘
+           │
+      ┌────┴─────┐
+      ▼          ▼
+ Random Forest  Isolation
+ V3 Expanded    Forest
+      │          │
+      └────┬─────┘
+           ▼
+┌──────────────────────┐
+│ Severity Estimation  │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────┐
+│   Quality Score      │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────┐
+│ ACCEPTED / REJECTED  │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────┐
+│       SQLite         │
+└──────────────────────┘
+```
+
+## 🌐 Deployment
+
+The application has been successfully deployed to **Render**.
+
+The deployed system provides the same production analysis pipeline used locally.
+
+> Add the live Render URL here:
+>
+> `https://ai-image-quality-frontend.onrender.com/`
+
+## 🔌 Backend API
+
+The FastAPI application is located at:
+
+```text
+backend/main.py
+```
+
+### Endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
@@ -166,67 +234,79 @@ The FastAPI application is in `backend/main.py`.
 | GET | `/analyses/{id}` | Retrieve one analysis |
 | POST | `/predict` | Legacy/experimental ResNet prediction |
 
-Interactive API documentation is available at:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-### Main `/analyze` flow
+### Main `/analyze` Flow
 
 ```text
 Upload
-  -> file validation
-  -> image-content validation
-  -> temporary image
-  -> CV feature extraction
-  -> Random Forest V3 Expanded
-  -> severity estimation
-  -> Isolation Forest
-  -> quality score
-  -> accept/reject
-  -> SQLite
-  -> JSON response
+  ↓
+File validation
+  ↓
+Image-content validation
+  ↓
+Temporary image
+  ↓
+CV feature extraction
+  ↓
+Random Forest V3 Expanded
+  ↓
+Severity estimation
+  ↓
+Isolation Forest
+  ↓
+Quality score
+  ↓
+Accept / Reject
+  ↓
+SQLite
+  ↓
+JSON response
 ```
 
-### Example
+### Example Request
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/analyze" -F "file=@image.jpg"
 ```
 
-## ResNet-18 Experimental Endpoint
+### Interactive API Documentation
 
-The repository also contains a ResNet-18 inference pipeline exposed through `/predict`.
+When running locally:
 
-This is intentionally separate from the production `/analyze` workflow.
+```text
+http://127.0.0.1:8000/docs
+```
+
+## 🧪 ResNet-18 Experimental Pipeline
+
+The repository also contains a separate ResNet-18 inference pipeline exposed through `/predict`.
+
+This is **not the production analysis workflow**.
 
 ```text
 /analyze
-    -> CV features
-    -> Random Forest V3 Expanded
-    -> Isolation Forest
-    -> quality assessment
-
-/predict
-    -> ResNet-18
-    -> degradation prediction
-    -> confidence/probabilities
+    ↓
+CV Features
+    ↓
+Random Forest V3 Expanded
+    ↓
+Isolation Forest
+    ↓
+Quality Assessment
 ```
 
-The production application therefore uses Random Forest V3 Expanded + Isolation Forest, while ResNet-18 is retained as an experimental/alternative model.
+```text
+/predict
+    ↓
+ResNet-18
+    ↓
+Degradation Prediction
+    ↓
+Confidence / Probabilities
+```
 
-## Frontend
+The production application therefore uses **Random Forest V3 Expanded + Isolation Forest**, while ResNet-18 is retained as an experimental/alternative model.
 
-The frontend uses:
-
-- React 19
-- Vite 6
-- Lucide React
-
-The interface provides image upload, quality results, issue/severity information, image statistics, anomaly information, model/evaluation information, and analysis history.
-
-## Database
+## 💾 Database
 
 SQLite stores analysis history in:
 
@@ -234,16 +314,31 @@ SQLite stores analysis history in:
 data/quality_analysis.db
 ```
 
-The Docker Compose configuration mounts a named volume for `/app/data` so history persists when the backend container is recreated.
+The Docker Compose configuration mounts a named volume for `/app/data` so analysis history can persist when the backend container is recreated.
 
-## Local Setup
+## 💻 Local Setup
 
 ### Backend
 
-```powershell
+```bash
 python -m venv .venv
+```
+
+Windows PowerShell:
+
+```powershell
 .venv\Scripts\Activate.ps1
+```
+
+Install dependencies:
+
+```bash
 pip install -r requirements.txt
+```
+
+Start FastAPI:
+
+```bash
 uvicorn backend.main:app --reload
 ```
 
@@ -261,7 +356,7 @@ http://127.0.0.1:8000/docs
 
 ### Frontend
 
-```powershell
+```bash
 cd frontend-react
 npm install
 npm run dev
@@ -273,29 +368,29 @@ The Vite development server normally runs at:
 http://localhost:5173
 ```
 
-## Docker
+## 🐳 Docker
 
-Build the backend image:
+Build:
 
-```powershell
+```bash
 docker build -t ai-image-quality .
 ```
 
-Run it:
+Run:
 
-```powershell
+```bash
 docker run --rm -p 8000:8000 ai-image-quality
 ```
 
-Or use Compose:
+Or use Docker Compose:
 
-```powershell
+```bash
 docker compose up --build
 ```
 
-## Testing
+## 🧪 Testing
 
-The repository contains scripts covering:
+The repository contains tests and scripts covering:
 
 - degradation generation
 - feature extraction
@@ -308,32 +403,17 @@ The repository contains scripts covering:
 - ResNet experiments
 - API behavior
 
-The API has been tested for valid analysis, health/model endpoints, analysis history, invalid file types, invalid image content, and nonexistent analysis IDs.
+API behavior has been tested for:
 
-## Evaluation and Failure Cases
+- valid image analysis
+- health endpoint
+- model endpoint
+- analysis history
+- invalid file types
+- invalid image content
+- nonexistent analysis IDs
 
-The strongest classes are blur and underexposure. The main weaknesses are the `none` class and confusion involving corruption/noise.
-
-The held-out test results show:
-
-- Blur F1: 0.95
-- Corruption F1: 0.78
-- Noise F1: 0.91
-- None F1: 0.54
-- Overexposure F1: 0.85
-- Underexposure F1: 0.98
-
-This makes the model useful for automated screening while leaving clear opportunities for further improvement.
-
-## Limitations
-
-1. The `none` class is the weakest class at F1 0.54.
-2. Corruption is more difficult to distinguish from noise and other classes.
-3. Quality scoring is a rule-based decision layer on top of model predictions and severity.
-4. Isolation Forest detects unusual feature patterns; anomaly does not automatically mean defect.
-5. The expanded dataset contains generated degradation variants, so performance on unseen real-world artifacts may differ.
-
-## Project Structure
+## 📁 Project Structure
 
 ```text
 ai-image-quality/
@@ -357,14 +437,79 @@ ai-image-quality/
 └── README.md
 ```
 
-## Future Improvements
+## ⚠️ Limitations
 
-- improve the `none` class
-- add more real-world degradation examples
-- probability calibration
-- automated threshold optimization
-- richer API response schemas
-- authentication and rate limiting
-- model monitoring
-- cloud object storage
+1. The `none` class is the weakest class at F1 0.54.
+2. Corruption is harder to distinguish from noise and other classes.
+3. Quality scoring is a rule-based decision layer on top of model predictions and severity.
+4. Isolation Forest detects unusual feature patterns; anomaly does not automatically mean defect.
+5. The expanded dataset contains generated degradation variants, so performance on unseen real-world artifacts may differ.
+
+## 🔮 Future Improvements
+
+- Improve the `none` class
+- Add more real-world degradation examples
+- Probability calibration
+- Automated threshold optimization
+- Richer API response schemas
+- Authentication and rate limiting
+- Model monitoring
+- Cloud object storage
 - CI/CD
+
+## 🛠️ Tech Stack
+
+**Machine Learning**
+- Python
+- Scikit-learn
+- Random Forest
+- Isolation Forest
+- ResNet-18
+
+**Computer Vision**
+- Image feature extraction
+- Image statistics
+- Sharpness and edge analysis
+- Exposure and clipping analysis
+- Blockiness analysis
+
+**Backend**
+- FastAPI
+- Uvicorn
+- SQLite
+
+**Frontend**
+- React 19
+- Vite 6
+- Lucide React
+
+**Deployment**
+- Docker
+- Docker Compose
+- Render
+
+## 📌 Key Takeaway
+
+This project demonstrates a complete ML application lifecycle:
+
+```text
+Data
+ ↓
+Feature Engineering
+ ↓
+Model Training
+ ↓
+Model Evaluation
+ ↓
+Inference Pipeline
+ ↓
+API
+ ↓
+Frontend
+ ↓
+Docker
+ ↓
+Cloud Deployment
+```
+
+The system is designed as an automated image-quality screening pipeline rather than a single standalone classifier.
