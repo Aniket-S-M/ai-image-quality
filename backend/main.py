@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from PIL import Image
 
-from src.inference import predict_image
 from src.quality_engine import assess_image
 
 from backend.database import (
@@ -56,7 +55,6 @@ RF_FEATURE_COUNT = 10
 
 ANOMALY_DETECTOR = "Isolation Forest"
 
-
 CLASS_NAMES = [
     "blur",
     "corruption",
@@ -73,10 +71,8 @@ CLASS_NAMES = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -158,7 +154,7 @@ def read_uploaded_image(contents):
 
         image.verify()
 
-        # verify() invalidates the object,
+        # verify() invalidates the image object,
         # therefore reopen it.
         image = Image.open(
             BytesIO(contents)
@@ -434,106 +430,6 @@ def analysis(
 
 
 # ============================================================
-# LEGACY RESNET PREDICTION ENDPOINT
-# ============================================================
-
-@app.post("/predict")
-async def predict(
-    file: UploadFile = File(...)
-):
-
-    """
-    Legacy / experimental prediction endpoint.
-
-    This endpoint uses the older ResNet-18
-    inference pipeline.
-
-    It is intentionally separate from /analyze.
-
-    /predict
-        -> ResNet-18
-        -> issue + confidence
-
-    /analyze
-        -> image validation
-        -> CV feature extraction
-        -> Random Forest V3 Expanded
-        -> severity estimation
-        -> Isolation Forest
-        -> quality score
-        -> accept/reject
-        -> database
-    """
-
-    # --------------------------------------------------------
-    # Validate file type
-    # --------------------------------------------------------
-
-    allowed_types = {
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-    }
-
-    if file.content_type not in allowed_types:
-
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Please upload a JPG, PNG, "
-                "or WEBP image."
-            ),
-        )
-
-    # --------------------------------------------------------
-    # Read image
-    # --------------------------------------------------------
-
-    contents = await file.read()
-
-    if not contents:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Uploaded file is empty.",
-        )
-
-    image = read_uploaded_image(
-        contents
-    )
-
-    # --------------------------------------------------------
-    # ResNet prediction
-    # --------------------------------------------------------
-
-    try:
-
-        result = predict_image(
-            image
-        )
-
-    except Exception as e:
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"Prediction failed: {e}"
-            ),
-        )
-
-    # --------------------------------------------------------
-    # Response
-    # --------------------------------------------------------
-
-    return {
-        "filename":
-            file.filename,
-
-        **result,
-    }
-
-
-# ============================================================
 # ROOT
 # ============================================================
 
@@ -555,9 +451,6 @@ def root():
 
         "main_endpoint":
             "/analyze",
-
-        "prediction_endpoint":
-            "/predict",
 
         "history_endpoint":
             "/analyses",
