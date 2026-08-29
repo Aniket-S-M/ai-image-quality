@@ -19,7 +19,6 @@ COPY src ./src
 COPY models ./models
 
 # ResNet experimental/legacy checkpoint
-COPY best_resnet18_finetuned.pth .
 
 RUN mkdir -p /app/data
 
