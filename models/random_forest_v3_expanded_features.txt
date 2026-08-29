@@ -1,0 +1,10 @@
+sharpness
+brightness
+highlight_clipping
+contrast
+saturation
+edge_density
+shadow_clipping
+dark_pixel_ratio
+bright_pixel_ratio
+blockiness

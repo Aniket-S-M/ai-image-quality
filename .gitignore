@@ -1,0 +1,58 @@
+@"
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.venv/
+venv/
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data / datasets / generated outputs
+data/raw/
+data/generated/
+data/features/
+data/metadata/
+data/splits/
+data/evaluation/
+downloads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Frontend
+frontend-react/node_modules/
+frontend-react/dist/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Python cache / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+"@ | Set-Content .gitignore
+# Legacy / experimental model artifacts
+models/random_forest.pkl
+models/random_forest_v2.pkl
+models/random_forest_v3.pkl
+
+# Experimental ResNet checkpoints
+best_resnet18_baseline.pth
+best_resnet18_finetuned.pth
